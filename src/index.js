@@ -6,7 +6,11 @@ const helmet = require('helmet');
 const { body, validationResult } = require('express-validator');
 
 const app = express();
+app.set('trust proxy', true); // Enable trust proxy to use X-Forwarded-For header
 const port = process.env.PORT || 3001;
+
+// Simple auth key for basic validation - change to something more secure in production
+const AUTH_KEY = "rugpull_sim_2024_auth";
 
 // Security Middleware
 app.use(helmet()); // Add various security headers
@@ -50,12 +54,18 @@ app.post('/leaderboard',
     body('rugPullHolders').optional().isNumeric().toInt(),
     body('marketCap').optional().isNumeric().toInt(),
     body('tickCount').optional().isNumeric().toInt(),
+    body('authToken').notEmpty(),
   ],
   (req, res) => {
     // Handle validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
+    }
+
+    // Verify auth token
+    if (req.body.authToken !== AUTH_KEY) {
+      return res.status(401).json({ error: 'Invalid authentication token' });
     }
 
     const { 
